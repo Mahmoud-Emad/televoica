@@ -5,6 +5,7 @@
 ### ✅ Issue 1: Poetry `--no-dev` Flag Deprecated
 
 **Error:**
+
 ```
 The option "--no-dev" does not exist
 Error: Process completed with exit code 1.
@@ -13,10 +14,12 @@ Error: Process completed with exit code 1.
 **Root Cause:** Poetry 1.2+ removed `--no-dev` flag
 
 **Files Fixed:**
+
 - `.github/workflows/deploy-bot.yml` (line 55)
 - `.github/workflows/deploy-bot-service.yml` (line 48)
 
 **Fix Applied:**
+
 ```yaml
 # Before
 poetry install --no-interaction --no-dev
@@ -30,6 +33,7 @@ poetry install --no-interaction --only main
 ### ✅ Issue 2: ImportError - `load_settings` Function
 
 **Error:**
+
 ```
 ImportError: cannot import name 'load_settings' from 'televoica.config.settings'
 ```
@@ -37,10 +41,12 @@ ImportError: cannot import name 'load_settings' from 'televoica.config.settings'
 **Root Cause:** Function is named `load_config`, not `load_settings`
 
 **Files Fixed:**
+
 - `.github/workflows/deploy-simple.yml` (line 66)
 - `.github/workflows/deploy-bot.yml` (line 76)
 
 **Fix Applied:**
+
 ```python
 # Before
 from televoica.config.settings import load_settings
@@ -56,6 +62,7 @@ settings = load_config()
 ### ✅ Issue 3: Systemd Service Fails to Start
 
 **Error:**
+
 ```
 Main process exited, code=exited, status=1/FAILURE
 ```
@@ -63,9 +70,11 @@ Main process exited, code=exited, status=1/FAILURE
 **Root Cause:** Incorrect ExecStart path and missing PATH environment
 
 **File Fixed:**
+
 - `.github/workflows/deploy-bot-service.yml` (lines 50-83)
 
 **Fix Applied:**
+
 ```ini
 # Before
 ExecStart=$(poetry env info --path)/bin/python -m televoica.cli.main bot
@@ -76,6 +85,7 @@ ExecStart=$VENV_PATH/bin/televoica bot
 ```
 
 **Additional Improvements:**
+
 - Added virtual environment path variable
 - Added PATH environment variable
 - Changed to use `televoica` command directly
@@ -87,6 +97,7 @@ ExecStart=$VENV_PATH/bin/televoica bot
 ### ✅ Issue 4: Docker Logs Permission Denied
 
 **Error:**
+
 ```
 error while creating mount source path '/Users/mahmoud/work/research/televoica/logs': 
 chown /Users/mahmoud/work/research/televoica/logs: permission denied
@@ -95,9 +106,11 @@ chown /Users/mahmoud/work/research/televoica/logs: permission denied
 **Root Cause:** Docker trying to create logs directory without permissions
 
 **File Fixed:**
+
 - `docker-compose.yml` (line 33)
 
 **Fix Applied:**
+
 ```yaml
 # Before
 - ./logs:/app/logs
@@ -107,6 +120,7 @@ chown /Users/mahmoud/work/research/televoica/logs: permission denied
 ```
 
 **Workaround:**
+
 ```bash
 # Create logs directory first if you want to use it
 mkdir -p logs
@@ -123,6 +137,7 @@ chmod 755 logs
 **Purpose:** Simplified testing workflow without systemd complexity
 
 **Features:**
+
 - Tests installation
 - Verifies configuration
 - Runs health check
@@ -138,6 +153,7 @@ chmod 755 logs
 **Purpose:** Comprehensive troubleshooting guide
 
 **Contents:**
+
 - Common issues and solutions
 - Debugging checklist
 - Workflow comparison
@@ -173,6 +189,7 @@ Actions → Deploy Bot (Simple) → Run workflow
 ```
 
 **Expected Result:**
+
 - ✅ Dependencies install
 - ✅ Configuration loads
 - ✅ Bot instance creates
@@ -187,6 +204,7 @@ Actions → Deploy Bot with Docker → Run workflow
 ```
 
 **Expected Result:**
+
 - ✅ Docker image builds
 - ✅ Image pushes to registry
 - ✅ Container deploys
@@ -201,6 +219,7 @@ Actions → Bot Health Check → Run workflow
 ```
 
 **Expected Result:**
+
 - ✅ Bot connection verified
 - ✅ Updates received
 - ✅ System resources checked
@@ -252,6 +271,7 @@ git push
 ### 3. Review Results
 
 If the simple workflow passes:
+
 - ✅ All dependencies work
 - ✅ Configuration is correct
 - ✅ Bot can initialize
@@ -262,16 +282,19 @@ If the simple workflow passes:
 Choose one:
 
 **Option A: Docker (Recommended)**
+
 ```
 Actions → Deploy Bot with Docker → Run workflow
 ```
 
 **Option B: Local Docker**
+
 ```bash
 docker compose up -d
 ```
 
 **Option C: Manual**
+
 ```bash
 poetry install
 export TELEGRAM_BOT_TOKEN="YOUR_TOKEN"
@@ -315,4 +338,3 @@ If you encounter any issues:
 **Status:** ✅ All issues resolved and ready for deployment
 
 **Next Step:** Run the "Deploy Bot (Simple)" workflow to verify everything works!
-

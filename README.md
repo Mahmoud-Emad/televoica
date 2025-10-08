@@ -1,5 +1,11 @@
 # Televoica Robot
 
+[![CI - Tests and Linting](https://github.com/Mahmoud-Emad/televoica/actions/workflows/ci.yml/badge.svg)](https://github.com/Mahmoud-Emad/televoica/actions/workflows/ci.yml)
+[![Deploy Bot with Docker](https://github.com/Mahmoud-Emad/televoica/actions/workflows/deploy-docker.yml/badge.svg)](https://github.com/Mahmoud-Emad/televoica/actions/workflows/deploy-docker.yml)
+[![Bot Health Check](https://github.com/Mahmoud-Emad/televoica/actions/workflows/health-check.yml/badge.svg)](https://github.com/Mahmoud-Emad/televoica/actions/workflows/health-check.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A modular, high-accuracy speech-to-text library with optional Telegram bot integration. Built with Python and designed for flexibility and ease of use.
 
 ## Features

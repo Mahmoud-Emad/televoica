@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 from televoica.config.settings import (
     Settings,
-    STTConfig,
     TelegramConfig,
     load_config,
     _load_from_env,

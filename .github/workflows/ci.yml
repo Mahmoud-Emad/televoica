@@ -1,0 +1,141 @@
+name: CI - Tests and Linting
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --only main,dev
+      
+      - name: Run Ruff (Linter)
+        run: |
+          echo "=== Running Ruff Linter ==="
+          poetry run ruff check . || true
+      
+      - name: Run Black (Code Formatter Check)
+        run: |
+          echo "=== Checking Code Formatting with Black ==="
+          poetry run black --check . || true
+      
+      - name: Run MyPy (Type Checker)
+        run: |
+          echo "=== Running MyPy Type Checker ==="
+          poetry run mypy televoica --ignore-missing-imports || true
+
+  test:
+    name: Run Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --only main,dev
+      
+      - name: Install FFmpeg (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
+      - name: Install FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ffmpeg
+      
+      - name: Run Tests
+        run: |
+          echo "=== Running Tests ==="
+          poetry run pytest -v --cov=televoica --cov-report=term-missing
+      
+      - name: Generate Coverage Report
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        run: |
+          poetry run pytest --cov=televoica --cov-report=xml
+      
+      - name: Upload Coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: always()
+    
+    steps:
+      - name: Check test results
+        run: |
+          echo "=== CI Summary ==="
+          echo "Lint job: ${{ needs.lint.result }}"
+          echo "Test job: ${{ needs.test.result }}"
+          
+          if [ "${{ needs.lint.result }}" == "failure" ] || [ "${{ needs.test.result }}" == "failure" ]; then
+            echo "❌ CI failed"
+            exit 1
+          else
+            echo "✅ CI passed"
+          fi
+

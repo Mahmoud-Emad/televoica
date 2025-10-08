@@ -5,6 +5,7 @@
 ### Issue 1: `--no-dev` option does not exist
 
 **Error:**
+
 ```
 The option "--no-dev" does not exist
 Error: Process completed with exit code 1.
@@ -19,12 +20,14 @@ Error: Process completed with exit code 1.
 ### Issue 2: Systemd service fails to start
 
 **Error:**
+
 ```
 ❌ Bot service failed to start
 Main process exited, code=exited, status=1/FAILURE
 ```
 
 **Possible Causes:**
+
 1. Incorrect Python/televoica path in ExecStart
 2. Missing dependencies
 3. Bot token not properly passed to service
@@ -33,6 +36,7 @@ Main process exited, code=exited, status=1/FAILURE
 **Solution:** ✅ **FIXED** - Updated systemd service configuration
 
 **To debug further:**
+
 ```bash
 # Check service status
 sudo systemctl status televoica-bot
@@ -54,6 +58,7 @@ poetry run televoica bot
 ### Issue 3: Docker permission denied on logs directory
 
 **Error:**
+
 ```
 error while creating mount source path '/Users/mahmoud/work/research/televoica/logs': 
 chown /Users/mahmoud/work/research/televoica/logs: permission denied
@@ -62,6 +67,7 @@ chown /Users/mahmoud/work/research/televoica/logs: permission denied
 **Solution:** ✅ **FIXED** - Commented out logs volume in docker-compose.yml
 
 **Alternative solutions:**
+
 ```bash
 # Option 1: Create logs directory first
 mkdir -p logs
@@ -86,6 +92,7 @@ Actions → Deploy Bot (Simple) → Run workflow
 ```
 
 This workflow:
+
 - ✅ Tests installation
 - ✅ Verifies configuration
 - ✅ Runs health check
@@ -101,6 +108,7 @@ Actions → Deploy Bot with Docker → Run workflow
 ```
 
 Or locally:
+
 ```bash
 docker compose up -d
 ```
@@ -194,6 +202,7 @@ poetry run televoica bot
 ### 4. Enable Debug Logging
 
 Edit workflow to add:
+
 ```yaml
 env:
   STT_LOG_LEVEL: DEBUG
@@ -224,16 +233,19 @@ All workflows have been updated and should work correctly:
 ## Next Steps
 
 1. **Try the simple workflow first:**
+
    ```
    Actions → Deploy Bot (Simple) → Run workflow
    ```
 
 2. **If that passes, deploy with Docker:**
+
    ```
    Actions → Deploy Bot with Docker → Run workflow
    ```
 
 3. **Monitor with health checks:**
+
    ```
    Actions → Bot Health Check → Run workflow
    ```
@@ -251,4 +263,3 @@ If you still encounter issues:
    - Error message
    - Workflow logs
    - Steps to reproduce
-

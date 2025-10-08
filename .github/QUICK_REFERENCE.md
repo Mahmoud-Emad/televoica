@@ -3,6 +3,7 @@
 ## 🚀 Deploy in 3 Steps
 
 ### Step 1: Add Secret
+
 ```
 Settings → Secrets → Actions → New secret
 Name: TELEGRAM_BOT_TOKEN
@@ -10,11 +11,13 @@ Value: YOUR_BOT_TOKEN_HERE
 ```
 
 ### Step 2: Run Workflow
+
 ```
 Actions → Deploy Bot with Docker → Run workflow
 ```
 
 ### Step 3: Test Bot
+
 ```
 Open Telegram → Search for your bot → Send /start
 ```
@@ -149,14 +152,17 @@ htop
 ## 📊 Workflow Triggers
 
 ### Deploy Bot with Docker
+
 - ✅ Push to main
 - ✅ Manual trigger
 
 ### Deploy Bot Service
+
 - ✅ Push to main
 - ✅ Manual trigger
 
 ### Health Check
+
 - ✅ Every 30 minutes
 - ✅ Manual trigger
 
@@ -237,4 +243,3 @@ docker system prune -a
 ---
 
 **Need more help?** Check the [full documentation](../docs/)
-

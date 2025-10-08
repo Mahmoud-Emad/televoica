@@ -83,13 +83,16 @@ This repository now includes complete GitHub Actions workflows for automated dep
 ### 2. Deploy
 
 **Option A: Docker (Recommended)**
+
 - Go to **Actions** → **Deploy Bot with Docker** → **Run workflow**
 
 **Option B: Systemd Service**
+
 - Set up self-hosted runner first
 - Go to **Actions** → **Deploy Bot Service** → **Run workflow**
 
 **Option C: Local Docker**
+
 ```bash
 echo "TELEGRAM_BOT_TOKEN=YOUR_TOKEN" > .env
 docker compose up -d
@@ -132,10 +135,12 @@ environment:
 ### Deploy Bot with Docker
 
 **Triggers**:
+
 - Push to `main` branch
 - Manual trigger
 
 **Steps**:
+
 1. Build Docker image
 2. Push to GitHub Container Registry
 3. Deploy container
@@ -147,10 +152,12 @@ environment:
 ### Deploy Bot Service
 
 **Triggers**:
+
 - Push to `main` branch
 - Manual trigger
 
 **Steps**:
+
 1. Install dependencies
 2. Create systemd service
 3. Start service
@@ -162,10 +169,12 @@ environment:
 ### Bot Health Check
 
 **Triggers**:
+
 - Every 30 minutes (cron)
 - Manual trigger
 
 **Steps**:
+
 1. Check bot connection
 2. Verify updates
 3. Monitor resources
@@ -209,7 +218,8 @@ environment:
 
 ### Bot doesn't respond
 
-**Solution**: 
+**Solution**:
+
 1. Check workflow logs
 2. Run health check manually
 3. Verify bot token is correct
@@ -247,4 +257,3 @@ environment:
 ---
 
 **Ready to deploy?** Follow the [Quick Start](#-quick-start) above!
-
