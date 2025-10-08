@@ -118,60 +118,6 @@ TELEGRAM_ALLOWED_USERS=         # Comma-separated user IDs (empty = all users)
 
 The bot will be automatically deployed and monitored!
 
-**Available Workflows:**
-
-- **CI - Tests and Linting**: Runs on every push
-- **Deploy Bot with Docker**: Deploy the bot
-- **Bot Health Check**: Monitors bot every 30 minutes
-
-[Deployment Guide](docs/DEPLOYMENT.md) | [GitHub Actions Setup](docs/GITHUB_ACTIONS_SETUP.md)
-
-## Usage as a Library
-
-You can also use Televoica as a Python library:
-
-```python
-from televoica.core.engine import SpeechToTextEngine
-from televoica.core.providers import WhisperProvider
-
-# Create engine
-provider = WhisperProvider({"model": "base", "device": "cpu"})
-engine = SpeechToTextEngine(provider=provider)
-
-# Transcribe file
-text = engine.transcribe_file("audio.mp3")
-print(text)
-```
-
-See [`examples/`](examples/) for more examples.
-
-## Troubleshooting
-
-**Bot not responding?**
-
-```bash
-# Check if bot is running
-docker compose ps
-
-# Check logs
-docker compose logs -f
-
-# Run health check
-python scripts/health_check.py
-```
-
-**High resource usage?**
-
-Use a smaller model in `.env`:
-
-```bash
-STT_WHISPER_MODEL=tiny  # Fastest, uses less RAM
-```
-
-**Need help?**
-
-- [Issue Tracker](https://github.com/Mahmoud-Emad/televoica/issues)
-
 ## Development
 
 ```bash
