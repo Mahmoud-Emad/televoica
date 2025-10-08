@@ -11,19 +11,6 @@ A modular, high-accuracy speech-to-text library with optional Telegram bot integ
 - **Easy to Use**: Simple CLI and Python API
 - **Production Ready**: Proper error handling, logging, and type hints
 
-## 📋 Table of Contents
-
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Usage Modes](#usage-modes)
-  - [Standalone Library](#standalone-library)
-  - [Telegram Bot](#telegram-bot)
-- [Configuration](#configuration)
-- [CLI Usage](#cli-usage)
-- [Python API](#python-api)
-- [Examples](#examples)
-- [Development](#development)
-
 ## Installation
 
 ### Prerequisites
