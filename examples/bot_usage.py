@@ -29,7 +29,7 @@ def load_env_file():
 
     for env_file in possible_locations:
         if env_file.exists():
-            print(f"✅ Loading environment from {env_file}")
+            print(f"Loading environment from {env_file}")
             with open(env_file) as f:
                 for line in f:
                     line = line.strip()
@@ -95,12 +95,12 @@ def run_bot():
     bot = TelegramSTTBot(settings=settings, engine=engine)
 
     try:
-        print("🤖 Starting Telegram bot...")
+        print("Starting Telegram bot...")
         print("Press Ctrl+C to stop")
         print()
         bot.run()
     except KeyboardInterrupt:
-        print("\n\n✅ Bot stopped by user")
+        print("\n\nBot stopped by user")
         bot.stop()
 
 
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     # Check if bot token is set
     if not os.getenv("TELEGRAM_BOT_TOKEN"):
-        print("❌ TELEGRAM_BOT_TOKEN not found!")
+        print("ERROR: TELEGRAM_BOT_TOKEN not found!")
         print()
         print("Setup instructions:")
         print()
@@ -131,10 +131,10 @@ if __name__ == "__main__":
         print("   TELEGRAM_BOT_TOKEN=your_token_here")
         print()
         print("3. Get a bot token from @BotFather on Telegram:")
-        print("   • Open @BotFather")
-        print("   • Send /newbot")
-        print("   • Follow instructions")
-        print("   • Copy the token")
+        print("   - Open @BotFather")
+        print("   - Send /newbot")
+        print("   - Follow instructions")
+        print("   - Copy the token")
         print()
         exit(1)
 

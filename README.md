@@ -1,4 +1,4 @@
-# Televoica Robot
+# Televoica
 
 [![CI - Tests and Linting](https://github.com/Mahmoud-Emad/televoica/actions/workflows/ci.yml/badge.svg)](https://github.com/Mahmoud-Emad/televoica/actions/workflows/ci.yml)
 [![Deploy Bot with Docker](https://github.com/Mahmoud-Emad/televoica/actions/workflows/deploy-docker.yml/badge.svg)](https://github.com/Mahmoud-Emad/televoica/actions/workflows/deploy-docker.yml)
@@ -6,191 +6,129 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A modular, high-accuracy speech-to-text library with optional Telegram bot integration. Built with Python and designed for flexibility and ease of use.
+**A Telegram bot that transcribes voice messages using OpenAI Whisper.**
+
+Send a voice message → Get text back. Simple as that.
 
 ## Features
 
-- **Dual Mode Operation**: Use as a standalone library or as a Telegram bot
-- **Modular Architecture**: Core STT functionality separated from bot integration
-- **Multiple STT Providers**: Support for OpenAI Whisper and Google Cloud Televoica
-- **Flexible Configuration**: Environment variables, config files, or programmatic setup
-- **Easy to Use**: Simple CLI and Python API
-- **Production Ready**: Proper error handling, logging, and type hints
-- **Automated Deployment**: GitHub Actions for CI/CD and health monitoring
-- **Docker Support**: Containerized deployment for easy scaling
+- **Voice to Text**: Transcribe voice messages and audio files
+- **Telegram Bot**: Easy to use via Telegram
+- **Fast & Accurate**: Powered by OpenAI Whisper
+- **Docker Ready**: One-command deployment
+- **Auto Monitoring**: Health checks every 30 minutes
+- **Easy Setup**: Just add your bot token
 
-## Installation
+## Quick Start
 
-### Prerequisites
+### 1. Get a Bot Token
 
-**FFmpeg is required** for audio processing:
+1. Open [@BotFather](https://t.me/BotFather) on Telegram
+2. Send `/newbot` and follow the instructions
+3. Copy your bot token
 
-```bash
-# macOS
-brew install ffmpeg
+### 2. Run the Bot
 
-# Ubuntu/Debian
-sudo apt update && sudo apt install ffmpeg
-
-# Windows (using Chocolatey)
-choco install ffmpeg
-
-# Or download from: https://ffmpeg.org/download.html
-```
-
-### Using Poetry (Recommended)
+**Option A: Docker (Recommended)**
 
 ```bash
-# Clone the repository
+# Clone the repo
 git clone https://github.com/Mahmoud-Emad/televoica.git
 cd televoica
 
-# Install dependencies
-poetry install
-```
-
-### Using Docker
-
-```bash
-# Create .env file with your bot token
-echo "TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN_HERE" > .env
+# Create .env file
+cp .env.example .env
+# Edit .env and add your TELEGRAM_BOT_TOKEN
 
 # Start the bot
 docker compose up -d
 
-# View logs
+# Check logs
 docker compose logs -f
 ```
 
-## Quick Start
-
-### 1. Get a Telegram Bot Token
-
-1. Open Telegram and search for [@BotFather](https://t.me/BotFather)
-2. Send `/newbot` command and follow instructions
-3. Copy the bot token provided
-
-### 2. Run the Bot
-
-**Using Docker (Easiest)**:
+**Option B: Local Installation**
 
 ```bash
-# Set your bot token
-export TELEGRAM_BOT_TOKEN="YOUR_BOT_TOKEN_HERE"
+# Clone the repo
+git clone https://github.com/Mahmoud-Emad/televoica.git
+cd televoica
 
-# Start with docker-compose
-docker compose up -d
-```
+# Install FFmpeg (required)
+brew install ffmpeg  # macOS
+# or: sudo apt install ffmpeg  # Ubuntu
 
-**Using Poetry**:
-
-```bash
-# Set your bot token
-export TELEGRAM_BOT_TOKEN="YOUR_BOT_TOKEN_HERE"
-export STT_TELEGRAM_BOT=true
-
-# Run the bot
-poetry run televoica bot
-```
-
-**Using Python directly**:
-
-```bash
 # Install dependencies
-pip install -e .
+poetry install
+
+# Create .env file
+cp .env.example .env
+# Edit .env and add your TELEGRAM_BOT_TOKEN
 
 # Run the bot
-televoica bot
+poetry run python examples/bot_usage.py
 ```
 
-### 3. Test Your Bot
+### 3. Test It
 
-1. Open Telegram and search for your bot
-2. Send `/start` command
-3. Send a voice message or audio file
-4. Receive the transcription!
-
-## Deployment
-
-### GitHub Actions (Automated)
-
-This project includes GitHub Actions workflows for automated deployment and monitoring.
-
-**Quick Setup**:
-
-1. Fork/clone this repository
-2. Add `TELEGRAM_BOT_TOKEN` to GitHub Secrets:
-   - Go to Settings → Secrets and variables → Actions
-   - Add new secret: `TELEGRAM_BOT_TOKEN`
-3. Push to `main` branch or manually trigger workflow
-4. Bot will be automatically deployed!
-
-**Available Workflows**:
-
-- **Deploy Bot with Docker**: Builds and deploys containerized bot
-- **Deploy Bot Service**: Deploys as systemd service (requires self-hosted runner)
-- **Bot Health Check**: Runs every 30 minutes to monitor bot health
-
-📚 **[Complete GitHub Actions Setup Guide](docs/GITHUB_ACTIONS_SETUP.md)**
-
-### Manual Deployment
-
-See the **[Deployment Guide](docs/DEPLOYMENT.md)** for detailed instructions on:
-
-- Docker deployment
-- Systemd service setup
-- Manual deployment
-- Configuration options
-- Monitoring and troubleshooting
+1. Find your bot on Telegram
+2. Send `/start`
+3. Send a voice message
+4. Get your transcription!
 
 ## Configuration
 
-### Environment Variables
+All configuration is done via the `.env` file:
 
 ```bash
 # Required
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 
-# Optional
-STT_TELEGRAM_BOT=true                    # Enable bot mode
-STT_PROVIDER=whisper                     # STT provider (whisper, google_cloud)
-STT_WHISPER_MODEL=base                   # Model size (tiny, base, small, medium, large)
-STT_WHISPER_DEVICE=cpu                   # Device (cpu, cuda)
-STT_WHISPER_LANGUAGE=                    # Language code or empty for auto-detect
-TELEGRAM_ALLOWED_USERS=                  # Comma-separated user IDs
-TELEGRAM_MAX_FILE_SIZE_MB=20             # Max file size in MB
-STT_LOG_LEVEL=INFO                       # Log level
+# Optional - Whisper Settings
+STT_WHISPER_MODEL=base          # tiny, base, small, medium, large
+STT_WHISPER_DEVICE=cpu          # cpu or cuda
+STT_WHISPER_LANGUAGE=           # Leave empty for auto-detect
+
+# Optional - Bot Settings
+TELEGRAM_MAX_FILE_SIZE_MB=20    # Max audio file size
+TELEGRAM_ALLOWED_USERS=         # Comma-separated user IDs (empty = all users)
 ```
 
-### Configuration File
+**Model Comparison:**
 
-Create `config.yaml`:
+| Model  | Speed    | Accuracy | RAM   | Best For              |
+|--------|----------|----------|-------|-----------------------|
+| tiny   | Fastest  | Low      | ~1GB  | Testing               |
+| base   | Fast     | Good     | ~1GB  | **Recommended**       |
+| small  | Medium   | Better   | ~2GB  | Better accuracy       |
+| medium | Slow     | High     | ~5GB  | High accuracy needed  |
+| large  | Slowest  | Highest  | ~10GB | Maximum accuracy      |
 
-```yaml
-telegram_bot: true
-log_level: INFO
+## Deployment
 
-stt_provider: whisper
-whisper_model: base
-whisper_device: cpu
+### GitHub Actions (Automated)
 
-telegram_allowed_users: []  # Empty = allow all
-telegram_max_file_size_mb: 20
-```
+1. Fork this repository
+2. Add `TELEGRAM_BOT_TOKEN` to GitHub Secrets:
+   - Go to **Settings** → **Secrets and variables** → **Actions**
+   - Click **New repository secret**
+   - Name: `TELEGRAM_BOT_TOKEN`
+   - Value: Your bot token
+3. Go to **Actions** tab → **Deploy Bot with Docker** → **Run workflow**
 
-Run with config file:
+The bot will be automatically deployed and monitored!
 
-```bash
-televoica bot --config config.yaml
-```
+**Available Workflows:**
 
-## Usage Examples
+- **CI - Tests and Linting**: Runs on every push
+- **Deploy Bot with Docker**: Deploy the bot
+- **Bot Health Check**: Monitors bot every 30 minutes
 
-### As a Telegram Bot
+[Deployment Guide](docs/DEPLOYMENT.md) | [GitHub Actions Setup](docs/GITHUB_ACTIONS_SETUP.md)
 
-See [Quick Start](#quick-start) above.
+## Usage as a Library
 
-### As a Python Library
+You can also use Televoica as a Python library:
 
 ```python
 from televoica.core.engine import SpeechToTextEngine
@@ -203,150 +141,59 @@ engine = SpeechToTextEngine(provider=provider)
 # Transcribe file
 text = engine.transcribe_file("audio.mp3")
 print(text)
-
-# Transcribe bytes
-with open("audio.mp3", "rb") as f:
-    audio_bytes = f.read()
-text = engine.transcribe_bytes(audio_bytes, format="mp3")
-print(text)
 ```
 
-### CLI Usage
+See [`examples/`](examples/) for more examples.
+
+## Troubleshooting
+
+**Bot not responding?**
 
 ```bash
-# Transcribe a file
-televoica transcribe audio.mp3
+# Check if bot is running
+docker compose ps
 
-# Transcribe with specific model
-televoica transcribe audio.mp3 --whisper-model medium
+# Check logs
+docker compose logs -f
 
-# Save to file
-televoica transcribe audio.mp3 -o transcription.txt
-
-# Run bot
-televoica bot
-
-# Run bot with config
-televoica bot --config config.yaml
-```
-
-## Health Monitoring
-
-The project includes a health check script for monitoring:
-
-```bash
 # Run health check
-export TELEGRAM_BOT_TOKEN="your_token"
-python scripts/health_check.py
-
-# With test message
-export HEALTH_CHECK_CHAT_ID="your_chat_id"
 python scripts/health_check.py
 ```
 
-Health checks verify:
+**High resource usage?**
 
-- ✅ Bot connection to Telegram API
-- ✅ Bot can receive updates
-- ✅ System resources (CPU, memory, disk)
-- ✅ Optional: Send test message
+Use a smaller model in `.env`:
 
-## Project Structure
-
-```
-televoica/
-├── .github/
-│   └── workflows/          # GitHub Actions workflows
-│       ├── deploy-docker.yml
-│       ├── deploy-bot-service.yml
-│       └── health-check.yml
-├── docs/                   # Documentation
-│   ├── DEPLOYMENT.md
-│   └── GITHUB_ACTIONS_SETUP.md
-├── scripts/                # Utility scripts
-│   ├── health_check.py
-│   └── README.md
-├── televoica/              # Main package
-│   ├── bot/               # Telegram bot integration
-│   ├── cli/               # Command-line interface
-│   ├── config/            # Configuration management
-│   └── core/              # Core STT engine
-├── examples/              # Usage examples
-├── tests/                 # Test suite
-├── Dockerfile             # Docker configuration
-├── docker-compose.yml     # Docker Compose configuration
-└── pyproject.toml         # Project dependencies
+```bash
+STT_WHISPER_MODEL=tiny  # Fastest, uses less RAM
 ```
 
-## Documentation
+**Need help?**
 
-- **[GitHub Actions Setup Guide](docs/GITHUB_ACTIONS_SETUP.md)** - Quick start for automated deployment
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Comprehensive deployment instructions
-- **[Scripts README](scripts/README.md)** - Utility scripts documentation
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Issue Tracker](https://github.com/Mahmoud-Emad/televoica/issues)
 
 ## Development
 
-### Running Tests
-
 ```bash
-# Run all tests
+# Run tests
 poetry run pytest
 
-# Run with coverage
+# Run tests with coverage
 poetry run pytest --cov=televoica
 
-# Run specific test
-poetry run pytest tests/test_config.py
-```
-
-### Code Quality
-
-```bash
 # Format code
 poetry run black .
 
 # Lint code
 poetry run ruff check .
-
-# Type checking
-poetry run mypy televoica
 ```
 
-## Troubleshooting
+## Documentation
 
-### Bot not responding?
-
-1. Check if bot is running:
-
-   ```bash
-   docker compose ps  # For Docker
-   sudo systemctl status televoica-bot  # For systemd
-   ```
-
-2. Check logs:
-
-   ```bash
-   docker compose logs -f  # For Docker
-   sudo journalctl -u televoica-bot -f  # For systemd
-   ```
-
-3. Run health check:
-
-   ```bash
-   python scripts/health_check.py
-   ```
-
-### High resource usage?
-
-Use a smaller Whisper model:
-
-```bash
-export STT_WHISPER_MODEL=tiny  # Smallest and fastest
-```
-
-### More help?
-
-See the **[Deployment Guide](docs/DEPLOYMENT.md)** for detailed troubleshooting.
+- [Deployment Guide](docs/DEPLOYMENT.md) - Complete deployment instructions
+- [GitHub Actions Setup](docs/GITHUB_ACTIONS_SETUP.md) - Automated deployment
+- [Examples](examples/) - Usage examples
 
 ## Contributing
 
@@ -354,15 +201,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- [OpenAI Whisper](https://github.com/openai/whisper) for speech recognition
-- [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) for Telegram integration
+- [OpenAI Whisper](https://github.com/openai/whisper) - Speech recognition
+- [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) - Telegram integration
 
-## Support
+---
 
-- 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/Mahmoud-Emad/televoica/issues)
-- 💬 [Discussions](https://github.com/Mahmoud-Emad/televoica/discussions)
+**Made by [Mahmoud Emad](https://github.com/Mahmoud-Emad)**

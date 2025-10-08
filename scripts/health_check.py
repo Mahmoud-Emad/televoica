@@ -56,16 +56,16 @@ class BotHealthChecker:
             
             self.bot = Bot(token=self.bot_token)
             bot_info = await self.bot.get_me()
-            
-            logger.info(f"✅ Bot connection successful")
+
+            logger.info(f"Bot connection successful")
             logger.info(f"   Bot username: @{bot_info.username}")
             logger.info(f"   Bot name: {bot_info.first_name}")
             logger.info(f"   Bot ID: {bot_info.id}")
-            
+
             return True
-            
+
         except Exception as e:
-            logger.error(f"❌ Bot connection failed: {e}")
+            logger.error(f"Bot connection failed: {e}")
             return False
     
     async def check_bot_updates(self) -> bool:
@@ -82,12 +82,12 @@ class BotHealthChecker:
             
             # Get recent updates
             updates = await self.bot.get_updates(limit=1)
-            logger.info(f"✅ Bot can receive updates (last update count: {len(updates)})")
-            
+            logger.info(f"Bot can receive updates (last update count: {len(updates)})")
+
             return True
-            
+
         except Exception as e:
-            logger.error(f"❌ Failed to get updates: {e}")
+            logger.error(f"Failed to get updates: {e}")
             return False
     
     async def send_test_message(self) -> bool:
@@ -98,27 +98,27 @@ class BotHealthChecker:
             True if message sent successfully, False otherwise
         """
         if not self.chat_id:
-            logger.warning("⚠️  No chat ID provided, skipping test message")
+            logger.warning("No chat ID provided, skipping test message")
             return True
-        
+
         try:
             if not self.bot:
                 logger.error("Bot not initialized")
                 return False
-            
+
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            message = f"🏥 Health check at {timestamp}\n\nBot is operational ✅"
-            
+            message = f"Health check at {timestamp}\n\nBot is operational"
+
             await self.bot.send_message(
                 chat_id=self.chat_id,
                 text=message
             )
-            
-            logger.info(f"✅ Test message sent successfully to chat {self.chat_id}")
+
+            logger.info(f"Test message sent successfully to chat {self.chat_id}")
             return True
-            
+
         except Exception as e:
-            logger.error(f"❌ Failed to send test message: {e}")
+            logger.error(f"Failed to send test message: {e}")
             return False
     
     async def check_system_resources(self) -> bool:
@@ -145,19 +145,19 @@ class BotHealthChecker:
             
             # Warning thresholds
             if cpu_percent > 90:
-                logger.warning(f"⚠️  High CPU usage: {cpu_percent}%")
+                logger.warning(f"High CPU usage: {cpu_percent}%")
             if memory.percent > 90:
-                logger.warning(f"⚠️  High memory usage: {memory.percent}%")
+                logger.warning(f"High memory usage: {memory.percent}%")
             if disk.percent > 90:
-                logger.warning(f"⚠️  High disk usage: {disk.percent}%")
-            
+                logger.warning(f"High disk usage: {disk.percent}%")
+
             return True
-            
+
         except ImportError:
-            logger.warning("⚠️  psutil not installed, skipping system resource check")
+            logger.warning("psutil not installed, skipping system resource check")
             return True
         except Exception as e:
-            logger.error(f"❌ Failed to check system resources: {e}")
+            logger.error(f"Failed to check system resources: {e}")
             return False
     
     async def run_health_check(self) -> bool:
@@ -198,13 +198,13 @@ class BotHealthChecker:
         total = len(checks)
         
         logger.info(f"Checks passed: {passed}/{total}")
-        
+
         if all(checks):
-            logger.info("✅ All health checks passed!")
+            logger.info("All health checks passed!")
             logger.info("=" * 60)
             return True
         else:
-            logger.error("❌ Some health checks failed!")
+            logger.error("Some health checks failed!")
             logger.info("=" * 60)
             return False
     
