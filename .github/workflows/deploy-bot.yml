@@ -1,0 +1,140 @@
+name: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-dev
+
+    - name: Validate bot token
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      run: |
+        if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+          echo "Error: TELEGRAM_BOT_TOKEN secret is not set"
+          exit 1
+        fi
+        echo "Bot token validation passed"
+
+    - name: Test bot configuration
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        STT_TELEGRAM_BOT: true
+        STT_PROVIDER: whisper
+        STT_WHISPER_MODEL: base
+        STT_WHISPER_DEVICE: cpu
+      run: |
+        poetry run python -c "
+        from televoica.config.settings import load_settings
+        from televoica.core.engine import SpeechToTextEngine
+        from televoica.core.providers import WhisperProvider
+        from televoica.bot.telegram_bot import TelegramSTTBot
+        
+        print('Loading settings...')
+        settings = load_settings()
+        print(f'Bot token configured: {bool(settings.telegram.bot_token)}')
+        
+        print('Initializing STT engine...')
+        provider = WhisperProvider({
+            'model': settings.stt.whisper_model,
+            'device': settings.stt.whisper_device,
+        })
+        engine = SpeechToTextEngine(provider=provider)
+        
+        print('Creating bot instance...')
+        bot = TelegramSTTBot(settings=settings, engine=engine)
+        print('Bot configuration test passed!')
+        "
+
+    - name: Start bot service
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        STT_TELEGRAM_BOT: true
+        STT_PROVIDER: whisper
+        STT_WHISPER_MODEL: base
+        STT_WHISPER_DEVICE: cpu
+        STT_LOG_LEVEL: INFO
+      run: |
+        echo "Starting Telegram bot..."
+        nohup poetry run televoica bot > bot.log 2>&1 &
+        BOT_PID=$!
+        echo $BOT_PID > bot.pid
+        echo "Bot started with PID: $BOT_PID"
+        
+        # Wait a few seconds for bot to initialize
+        sleep 10
+        
+        # Check if bot is still running
+        if kill -0 $BOT_PID 2>/dev/null; then
+          echo "Bot is running successfully"
+          echo "Bot logs:"
+          tail -20 bot.log
+        else
+          echo "Bot failed to start"
+          echo "Bot logs:"
+          cat bot.log
+          exit 1
+        fi
+
+    - name: Keep bot running
+      run: |
+        echo "Bot deployment completed successfully"
+        echo "Bot is running in the background"
+        echo "PID: $(cat bot.pid)"
+        echo "To stop the bot, kill the process with: kill $(cat bot.pid)"
+        
+        # In a real deployment, you would typically:
+        # 1. Use a process manager like systemd, supervisor, or PM2
+        # 2. Deploy to a server or container orchestration platform
+        # 3. Set up proper logging and monitoring
+        
+        # For demonstration, we'll let the workflow complete
+        # In production, you'd want to deploy to a persistent environment

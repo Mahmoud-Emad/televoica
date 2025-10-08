@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  televoica-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: televoica-bot
+    restart: unless-stopped
+    
+    environment:
+      # Bot configuration
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      STT_TELEGRAM_BOT: "true"
+      
+      # STT Provider settings
+      STT_PROVIDER: ${STT_PROVIDER:-whisper}
+      STT_WHISPER_MODEL: ${STT_WHISPER_MODEL:-base}
+      STT_WHISPER_DEVICE: ${STT_WHISPER_DEVICE:-cpu}
+      STT_WHISPER_LANGUAGE: ${STT_WHISPER_LANGUAGE:-}
+      
+      # Telegram settings
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS:-}
+      TELEGRAM_MAX_FILE_SIZE_MB: ${TELEGRAM_MAX_FILE_SIZE_MB:-20}
+      
+      # Logging
+      STT_LOG_LEVEL: ${STT_LOG_LEVEL:-INFO}
+    
+    volumes:
+      # Persist temporary files
+      - televoica-temp:/tmp/televoica
+      # Optional: Mount logs directory (comment out if you get permission errors)
+      # - ./logs:/app/logs
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "scripts/health_check.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  televoica-temp:
+    driver: local
+

@@ -1,0 +1,143 @@
+name: Deploy Bot Service (Production)
+
+# This workflow is designed for deployment to a self-hosted runner or server
+# It will start the bot as a persistent service
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'televoica/**'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - '.github/workflows/deploy-bot-service.yml'
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.10'
+  SERVICE_NAME: 'televoica-bot'
+
+jobs:
+  deploy-to-server:
+    runs-on: ubuntu-latest
+    # For production, use: runs-on: self-hosted
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: |
+        poetry install --no-interaction --no-root
+
+    - name: Create systemd service file
+      run: |
+        cat > televoica-bot.service << EOF
+        [Unit]
+        Description=Televoica Telegram Bot
+        After=network.target
+        
+        [Service]
+        Type=simple
+        User=$USER
+        WorkingDirectory=$(pwd)
+        Environment="TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}"
+        Environment="STT_TELEGRAM_BOT=true"
+        Environment="STT_PROVIDER=whisper"
+        Environment="STT_WHISPER_MODEL=base"
+        Environment="STT_WHISPER_DEVICE=cpu"
+        Environment="STT_LOG_LEVEL=INFO"
+        ExecStart=$(poetry env info --path)/bin/python -m televoica.cli.main bot
+        Restart=always
+        RestartSec=10
+        StandardOutput=append:/var/log/televoica-bot.log
+        StandardError=append:/var/log/televoica-bot-error.log
+        
+        [Install]
+        WantedBy=multi-user.target
+        EOF
+        
+        echo "Systemd service file created"
+        cat televoica-bot.service
+
+    - name: Install and start service
+      run: |
+        # Copy service file to systemd directory
+        sudo cp televoica-bot.service /etc/systemd/system/
+        
+        # Create log files
+        sudo touch /var/log/televoica-bot.log
+        sudo touch /var/log/televoica-bot-error.log
+        sudo chown $USER:$USER /var/log/televoica-bot.log
+        sudo chown $USER:$USER /var/log/televoica-bot-error.log
+        
+        # Reload systemd
+        sudo systemctl daemon-reload
+        
+        # Enable service to start on boot
+        sudo systemctl enable televoica-bot
+        
+        # Restart service
+        sudo systemctl restart televoica-bot
+        
+        # Wait for service to start
+        sleep 5
+        
+        # Check service status
+        sudo systemctl status televoica-bot --no-pager || true
+
+    - name: Verify deployment
+      run: |
+        # Check if service is active
+        if sudo systemctl is-active --quiet televoica-bot; then
+          echo "✅ Bot service is running"
+          sudo systemctl status televoica-bot --no-pager
+        else
+          echo "❌ Bot service failed to start"
+          echo "Service logs:"
+          sudo journalctl -u televoica-bot -n 50 --no-pager
+          exit 1
+        fi
+
+    - name: Show service logs
+      if: always()
+      run: |
+        echo "Recent service logs:"
+        sudo journalctl -u televoica-bot -n 50 --no-pager || true
+        
+        echo ""
+        echo "Application logs:"
+        sudo tail -50 /var/log/televoica-bot.log || true
+
+  notify-deployment:
+    needs: deploy-to-server
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Deployment notification
+      run: |
+        if [ "${{ needs.deploy-to-server.result }}" == "success" ]; then
+          echo "✅ Bot deployed successfully"
+        else
+          echo "❌ Bot deployment failed"
+          exit 1
+        fi
+

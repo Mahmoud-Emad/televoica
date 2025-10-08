@@ -1,0 +1,154 @@
+name: Bot Health Check
+
+# Run health checks on a schedule and on-demand
+on:
+  schedule:
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      send_test_message:
+        description: 'Send test message to chat'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install python-telegram-bot psutil
+
+    - name: Run health check
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        HEALTH_CHECK_CHAT_ID: ${{ secrets.HEALTH_CHECK_CHAT_ID }}
+      run: |
+        python scripts/health_check.py
+
+    - name: Check bot service status (systemd)
+      if: runner.os == 'Linux'
+      run: |
+        # This step is for self-hosted runners with systemd
+        if command -v systemctl &> /dev/null; then
+          echo "Checking systemd service status..."
+          if sudo systemctl is-active --quiet televoica-bot 2>/dev/null; then
+            echo "✅ Bot service is running"
+            sudo systemctl status televoica-bot --no-pager || true
+          else
+            echo "⚠️  Bot service is not running or not installed"
+          fi
+        else
+          echo "ℹ️  systemctl not available (not a self-hosted runner)"
+        fi
+
+    - name: Send notification on failure
+      if: failure()
+      run: |
+        echo "❌ Health check failed!"
+        echo "Timestamp: $(date)"
+        # In production, you would send notifications via:
+        # - Slack webhook
+        # - Discord webhook
+        # - Email
+        # - PagerDuty
+        # - Telegram message to admin
+
+  service-status:
+    runs-on: ubuntu-latest
+    # For production with self-hosted runner: runs-on: self-hosted
+    
+    steps:
+    - name: Check service logs
+      run: |
+        # This is for self-hosted runners
+        if command -v systemctl &> /dev/null; then
+          echo "Recent service logs:"
+          sudo journalctl -u televoica-bot -n 20 --no-pager || echo "Service not found"
+        else
+          echo "ℹ️  Running on GitHub-hosted runner, skipping service log check"
+        fi
+
+  alert-on-failure:
+    needs: [health-check]
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+    - name: Create issue on failure
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const title = '🚨 Bot Health Check Failed';
+          const body = `
+          ## Health Check Failure Report
+          
+          **Time:** ${new Date().toISOString()}
+          **Workflow:** ${context.workflow}
+          **Run ID:** ${context.runId}
+          **Run URL:** ${context.payload.repository.html_url}/actions/runs/${context.runId}
+          
+          ### Details
+          The automated health check for the Televoica bot has failed.
+          
+          ### Action Required
+          1. Check the workflow logs for details
+          2. Verify the bot is running
+          3. Check system resources
+          4. Review recent error logs
+          
+          ### Quick Commands
+          \`\`\`bash
+          # Check service status
+          sudo systemctl status televoica-bot
+          
+          # View recent logs
+          sudo journalctl -u televoica-bot -n 50
+          
+          # Restart service
+          sudo systemctl restart televoica-bot
+          \`\`\`
+          `;
+          
+          // Check if an issue already exists
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'bot-health-check,automated'
+          });
+          
+          if (issues.data.length === 0) {
+            // Create new issue
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bot-health-check', 'automated', 'bug']
+            });
+          } else {
+            // Add comment to existing issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issues.data[0].number,
+              body: `Another health check failure detected at ${new Date().toISOString()}\n\nRun URL: ${context.payload.repository.html_url}/actions/runs/${context.runId}`
+            });
+          }
+

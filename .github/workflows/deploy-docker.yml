@@ -1,0 +1,153 @@
+name: Deploy Bot with Docker
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'televoica/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'pyproject.toml'
+      - '.github/workflows/deploy-docker.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Image digest
+      run: echo ${{ steps.meta.outputs.digest }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # For production: runs-on: self-hosted
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create .env file
+      run: |
+        cat > .env << EOF
+        TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+        STT_PROVIDER=whisper
+        STT_WHISPER_MODEL=base
+        STT_WHISPER_DEVICE=cpu
+        STT_LOG_LEVEL=INFO
+        TELEGRAM_MAX_FILE_SIZE_MB=20
+        EOF
+
+    - name: Pull and deploy with Docker Compose
+      run: |
+        # Pull the latest image
+        docker compose pull
+        
+        # Stop and remove old containers
+        docker compose down
+        
+        # Start new containers
+        docker compose up -d
+        
+        # Wait for container to be healthy
+        echo "Waiting for container to be healthy..."
+        timeout 60 bash -c 'until docker compose ps | grep -q "healthy"; do sleep 2; done' || true
+
+    - name: Check deployment status
+      run: |
+        echo "Container status:"
+        docker compose ps
+        
+        echo ""
+        echo "Container logs:"
+        docker compose logs --tail=50
+        
+        # Check if container is running
+        if docker compose ps | grep -q "Up"; then
+          echo "✅ Bot deployed successfully"
+        else
+          echo "❌ Bot deployment failed"
+          exit 1
+        fi
+
+    - name: Cleanup old images
+      run: |
+        # Remove dangling images
+        docker image prune -f
+
+  verify-deployment:
+    needs: deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install python-telegram-bot
+
+    - name: Run health check
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      run: |
+        python scripts/health_check.py
+
+    - name: Deployment summary
+      if: always()
+      run: |
+        echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+
