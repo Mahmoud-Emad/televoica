@@ -1,0 +1,100 @@
+[project]
+name = "televoica"
+version = "0.1.0"
+description = "A modular speech-to-text library with optional Telegram bot integration"
+authors = [{ name = "Mahmoud-Emad", email = "mahmmoud.hassanein@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Note: FFmpeg is required as a system dependency for audio processing
+# Install with: brew install ffmpeg (macOS) or apt install ffmpeg (Linux)
+dependencies = [
+    # Core dependencies
+    "openai-whisper>=20231117",
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+
+    # Optional: Telegram bot
+    "python-telegram-bot>=20.0",
+
+    # Optional: Google Cloud STT
+    # "google-cloud-speech>=2.20.0",
+
+    # Configuration
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Telegram bot dependencies
+telegram = ["python-telegram-bot>=20.0"]
+
+# Google Cloud STT dependencies
+google = ["google-cloud-speech>=2.20.0"]
+
+# Development dependencies
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+
+# All optional dependencies
+all = ["python-telegram-bot>=20.0", "google-cloud-speech>=2.20.0"]
+
+[project.scripts]
+televoica = "televoica.cli.main:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "televoica"
+version = "0.1.0"
+description = "A modular speech-to-text library with optional Telegram bot integration"
+authors = ["Mahmoud-Emad <mahmmoud.hassanein@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "televoica" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+openai-whisper = ">=20231117"
+torch = ">=2.0.0"
+numpy = ">=1.24.0"
+python-telegram-bot = ">=20.0"
+pyyaml = ">=6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-cov = "^4.1.0"
+black = "^23.0.0"
+ruff = "^0.1.0"
+mypy = "^1.5.0"
+
+[tool.poetry.scripts]
+televoica = "televoica.cli.main:main"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
