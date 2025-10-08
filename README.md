@@ -170,7 +170,6 @@ STT_WHISPER_MODEL=tiny  # Fastest, uses less RAM
 
 **Need help?**
 
-- [Deployment Guide](docs/DEPLOYMENT.md)
 - [Issue Tracker](https://github.com/Mahmoud-Emad/televoica/issues)
 
 ## Development
@@ -189,25 +188,6 @@ poetry run black .
 poetry run ruff check .
 ```
 
-## Documentation
-
-- [Deployment Guide](docs/DEPLOYMENT.md) - Complete deployment instructions
-- [GitHub Actions Setup](docs/GITHUB_ACTIONS_SETUP.md) - Automated deployment
-- [Examples](examples/) - Usage examples
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [OpenAI Whisper](https://github.com/openai/whisper) - Speech recognition
-- [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) - Telegram integration
-
----
-
-**Made by [Mahmoud Emad](https://github.com/Mahmoud-Emad)**
