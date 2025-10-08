@@ -64,19 +64,19 @@ jobs:
         echo "=== Testing Bot Configuration ==="
         poetry run python -c "
         import os
-        from televoica.config.settings import load_settings
+        from televoica.config.settings import load_config, Settings, STTConfig, TelegramConfig
         from televoica.core.engine import SpeechToTextEngine
         from televoica.core.providers import WhisperProvider
         from televoica.bot.telegram_bot import TelegramSTTBot
-        
+
         print('✅ Imports successful')
-        
+
         print('Loading settings...')
-        settings = load_settings()
+        settings = load_config()
         print(f'✅ Bot token configured: {bool(settings.telegram.bot_token)}')
         print(f'✅ Provider: {settings.stt.provider}')
         print(f'✅ Model: {settings.stt.whisper_model}')
-        
+
         print('Initializing STT engine...')
         provider = WhisperProvider({
             'model': settings.stt.whisper_model,
@@ -84,11 +84,11 @@ jobs:
         })
         engine = SpeechToTextEngine(provider=provider)
         print('✅ STT engine initialized')
-        
+
         print('Creating bot instance...')
         bot = TelegramSTTBot(settings=settings, engine=engine)
         print('✅ Bot instance created')
-        
+
         print('')
         print('=== Configuration Test Passed ===')
         "
