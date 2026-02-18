@@ -62,8 +62,8 @@ packages = [{ include = "televoica" }]
 [tool.poetry.dependencies]
 python = "^3.10"
 openai-whisper = ">=20231117"
-torch = ">=2.0.0"
-numpy = ">=1.24.0"
+numpy = "1.26.4"
+torch = "2.2.2"
 python-telegram-bot = ">=20.0"
 pyyaml = ">=6.0"
 
