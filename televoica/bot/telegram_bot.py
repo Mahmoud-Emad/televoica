@@ -5,13 +5,24 @@ This module implements the Telegram bot that receives voice messages
 and uses the SpeechToTextEngine to transcribe them.
 """
 
+import asyncio
 import logging
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Optional
-import asyncio
 
+from televoica.core.audio import (
+    DEFAULT_CHUNK_SECONDS,
+    probe_duration_seconds,
+    split_into_chunks,
+)
 from televoica.core.engine import SpeechToTextEngine
 from televoica.config.settings import Settings
+
+# Files longer than this are split into chunks so we can show progress
+# and avoid loading huge audio into Whisper at once.
+CHUNK_THRESHOLD_SECONDS = DEFAULT_CHUNK_SECONDS
 
 logger = logging.getLogger(__name__)
 
@@ -131,104 +142,185 @@ class TelegramSTTBot:
     async def handle_voice(self, update, context):
         """Handle voice messages."""
         user_id = update.effective_user.id
-        
+
         if not self._is_user_allowed(user_id):
             await update.message.reply_text(
                 "⛔ Sorry, you are not authorized to use this bot."
             )
             return
-        
+
         voice = update.message.voice
-        
-        # Check file size
         if voice.file_size > self.max_file_size:
             await update.message.reply_text(
                 f"⚠️ File too large. Maximum size is {self.settings.telegram.max_file_size_mb} MB."
             )
             return
-        
-        # Send processing message
-        processing_msg = await update.message.reply_text("🎙️ Processing your voice message...")
-        
-        try:
-            # Download voice file
-            file = await context.bot.get_file(voice.file_id)
-            file_path = self.settings.temp_dir / f"{voice.file_id}.ogg"
-            await file.download_to_drive(file_path)
-            
-            logger.info(f"Downloaded voice message from user {user_id}: {file_path}")
-            
-            # Transcribe
-            text = self.engine.transcribe_file(file_path)
-            
-            # Clean up
-            file_path.unlink(missing_ok=True)
-            
-            # Send result
-            if text:
-                await processing_msg.edit_text(f"📝 Transcription:\n\n{text}")
-                logger.info(f"Transcription sent to user {user_id}")
-            else:
-                await processing_msg.edit_text("⚠️ No speech detected in the audio.")
-        
-        except Exception as e:
-            logger.error(f"Error processing voice message: {e}", exc_info=True)
-            await processing_msg.edit_text(
-                f"❌ Error processing voice message: {str(e)}"
-            )
+
+        await self._process_audio(
+            update=update,
+            context=context,
+            file_id=voice.file_id,
+            user_id=user_id,
+            file_suffix=".ogg",
+            initial_text="🎙️ Downloading your voice message...",
+            kind="voice message",
+        )
 
     async def handle_audio(self, update, context):
         """Handle audio files."""
         user_id = update.effective_user.id
-        
+
         if not self._is_user_allowed(user_id):
             await update.message.reply_text(
                 "⛔ Sorry, you are not authorized to use this bot."
             )
             return
-        
+
         audio = update.message.audio
-        
-        # Check file size
         if audio.file_size > self.max_file_size:
             await update.message.reply_text(
                 f"⚠️ File too large. Maximum size is {self.settings.telegram.max_file_size_mb} MB."
             )
             return
-        
-        # Send processing message
-        processing_msg = await update.message.reply_text("🎵 Processing your audio file...")
-        
+
+        file_suffix = Path(audio.file_name).suffix if audio.file_name else ".mp3"
+        await self._process_audio(
+            update=update,
+            context=context,
+            file_id=audio.file_id,
+            user_id=user_id,
+            file_suffix=file_suffix,
+            initial_text="🎵 Downloading your audio file...",
+            kind="audio file",
+        )
+
+    async def _process_audio(
+        self,
+        update,
+        context,
+        *,
+        file_id: str,
+        user_id: int,
+        file_suffix: str,
+        initial_text: str,
+        kind: str,
+    ):
+        """Download, optionally chunk, transcribe, and reply.
+
+        Long files are split into ~5-min chunks and transcribed sequentially
+        with per-chunk progress edits so the user sees forward motion. Every
+        Whisper call runs in a worker thread so the asyncio event loop stays
+        responsive (and Telegram long-polling doesn't drop).
+        """
+        processing_msg = await update.message.reply_text(initial_text)
+        file_path = self.settings.temp_dir / f"{file_id}{file_suffix}"
+        chunk_dir: Optional[Path] = None
+
         try:
-            # Download audio file
-            file = await context.bot.get_file(audio.file_id)
-            
-            # Determine file extension
-            file_ext = Path(audio.file_name).suffix if audio.file_name else ".mp3"
-            file_path = self.settings.temp_dir / f"{audio.file_id}{file_ext}"
-            
-            await file.download_to_drive(file_path)
-            
-            logger.info(f"Downloaded audio file from user {user_id}: {file_path}")
-            
-            # Transcribe
-            text = self.engine.transcribe_file(file_path)
-            
-            # Clean up
-            file_path.unlink(missing_ok=True)
-            
-            # Send result
+            tg_file = await context.bot.get_file(file_id)
+            await tg_file.download_to_drive(file_path)
+            logger.info(f"Downloaded {kind} from user {user_id}: {file_path}")
+
+            duration = await asyncio.to_thread(probe_duration_seconds, file_path)
+            if duration is None:
+                logger.info("Could not probe duration; transcribing as single chunk")
+
+            if duration and duration > CHUNK_THRESHOLD_SECONDS:
+                text = await self._transcribe_chunked(
+                    file_path, duration, processing_msg
+                )
+            else:
+                await processing_msg.edit_text("📝 Transcribing...")
+                text = await asyncio.to_thread(
+                    self.engine.transcribe_file, file_path
+                )
+
             if text:
-                await processing_msg.edit_text(f"📝 Transcription:\n\n{text}")
+                await self._send_transcription(processing_msg, text)
                 logger.info(f"Transcription sent to user {user_id}")
             else:
                 await processing_msg.edit_text("⚠️ No speech detected in the audio.")
-        
+
         except Exception as e:
-            logger.error(f"Error processing audio file: {e}", exc_info=True)
+            logger.error(f"Error processing {kind}: {e}", exc_info=True)
             await processing_msg.edit_text(
-                f"❌ Error processing audio file: {str(e)}"
+                f"❌ Error processing {kind}: {str(e)}"
             )
+        finally:
+            file_path.unlink(missing_ok=True)
+            if chunk_dir is not None:
+                shutil.rmtree(chunk_dir, ignore_errors=True)
+
+    async def _transcribe_chunked(
+        self, file_path: Path, duration: float, processing_msg
+    ) -> str:
+        """Split a long file into chunks and transcribe them in order."""
+        minutes = duration / 60
+        await processing_msg.edit_text(
+            f"🎬 Audio is ~{minutes:.1f} min — splitting into chunks..."
+        )
+
+        chunk_dir = Path(tempfile.mkdtemp(prefix="televoica_chunks_", dir=self.settings.temp_dir))
+        try:
+            chunks = await asyncio.to_thread(
+                split_into_chunks, file_path, chunk_dir, CHUNK_THRESHOLD_SECONDS
+            )
+            total = len(chunks)
+            logger.info(f"Split {file_path.name} into {total} chunks")
+
+            parts: list[str] = []
+            for idx, chunk in enumerate(chunks, start=1):
+                await processing_msg.edit_text(
+                    f"📝 Transcribing chunk {idx}/{total}..."
+                )
+                part = await asyncio.to_thread(self.engine.transcribe_file, chunk)
+                if part:
+                    parts.append(part.strip())
+                chunk.unlink(missing_ok=True)
+
+            return " ".join(parts).strip()
+        finally:
+            shutil.rmtree(chunk_dir, ignore_errors=True)
+
+    @staticmethod
+    async def _send_transcription(processing_msg, text: str) -> None:
+        """Send the transcription, splitting across messages if needed.
+
+        Telegram caps message bodies at 4096 chars; long transcripts get
+        broken into multiple replies on whitespace boundaries.
+        """
+        header = "📝 Transcription:\n\n"
+        max_len = 4000  # leave headroom for the header / safety margin
+
+        if len(text) + len(header) <= max_len:
+            await processing_msg.edit_text(header + text)
+            return
+
+        first, rest = TelegramSTTBot._split_for_telegram(text, max_len - len(header))
+        await processing_msg.edit_text(header + first)
+        chat = processing_msg.chat
+        for piece in rest:
+            await chat.send_message(piece)
+
+    @staticmethod
+    def _split_for_telegram(text: str, first_size: int) -> tuple[str, list[str]]:
+        """Split text on whitespace into a first piece and follow-ups (~4000 chars)."""
+        chunk_size = 4000
+        words = text.split(" ")
+        pieces: list[str] = []
+        current = ""
+        limit = first_size
+        for word in words:
+            candidate = f"{current} {word}".strip()
+            if len(candidate) > limit:
+                pieces.append(current)
+                current = word
+                limit = chunk_size
+            else:
+                current = candidate
+        if current:
+            pieces.append(current)
+        return pieces[0], pieces[1:]
 
     async def error_handler(self, update, context):
         """Handle errors."""
@@ -250,8 +342,17 @@ class TelegramSTTBot:
         
         logger.info("Starting Telegram bot...")
         
-        # Create application
-        self.application = Application.builder().token(self.bot_token).build()
+        # Create application with generous HTTP timeouts so post-transcription
+        # edits to long-running messages don't fail on slow networks.
+        self.application = (
+            Application.builder()
+            .token(self.bot_token)
+            .connect_timeout(30.0)
+            .read_timeout(60.0)
+            .write_timeout(60.0)
+            .pool_timeout(30.0)
+            .build()
+        )
         
         # Add handlers
         self.application.add_handler(CommandHandler("start", self.start_command))
